@@ -5,6 +5,8 @@ from tkinter import messagebox
 from tkinter import ttk
 import os
 
+#19 de junio
+
 ##### VARIABLES #######
 ventanas_abiertas = {"recibir": 0, "swap": 0,"enviar": 0, "comprar": 0, "vender": 0}
 wallet_number = "6942969"
