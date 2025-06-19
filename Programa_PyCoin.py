@@ -6,7 +6,7 @@ from tkinter import ttk
 import os
 
 ##### VARIABLES #######
-ventanas_abiertas = {"recibir": 0, "swap": 0,"enviar": 0, "comprar": 0}
+ventanas_abiertas = {"recibir": 0, "swap": 0,"enviar": 0, "comprar": 0, "vender": 0}
 wallet_number = "6942969"
 cryptos = []
 
@@ -23,7 +23,9 @@ button_style = {
     'activeforeground': 'white'
 }
 
+
 ##### FUNCIONES DE GESTIÓN DE ARCHIVOS #########
+
 def cargar_datos():
     global cryptos
     if os.path.exists("assets.txt"):
@@ -67,7 +69,7 @@ def obtener_precio_cripto(nombre):
 
 
 ##### FUNCIONES #########
-# falta hacer
+
 def conversion():
     pass
 
@@ -100,7 +102,7 @@ def cerrar_ventana(ventana, tipo):
 
 ################################# FUNCION SWAP ###################################
 
-def swap_cryptos(or_sfr, crypto_origen, cantidad, crypto_destino, cryptos):
+def swap_cryptos(or_sfr, crypto_origen, cantidad, crypto_destino, cryptos, label_mensaje):
     # Busco las posiciones de las criptomonedas de origen y destino en nuestra lista de criptos.
     indice_origen, indice_destino = -1, -1  # Valor predeterminado mientras no se encuentre ka crypto -1
 
@@ -117,7 +119,7 @@ def swap_cryptos(or_sfr, crypto_origen, cantidad, crypto_destino, cryptos):
 
     # Verificar si las dos criptomonedas que eligió el usuario son la misma / ind. iguales = misma crp
     if indice_origen == indice_destino:
-        messagebox.showerror("Error", "Selecciona dos criptomonedas que sean diferentes.")
+        label_mensaje.config(text="Selecciona dos criptomonedas que sean diferentes.", fg="red")
         return False
 
         # Son diferentes
@@ -130,7 +132,7 @@ def swap_cryptos(or_sfr, crypto_origen, cantidad, crypto_destino, cryptos):
         # Cantidad que quiere cambiar es válida?
         # No cero o menos, y no más de lo que tiene
         if cantidad <= 0 or cantidad > cantidad_origen:
-            messagebox.showerror("Error", "La cantidad que ingresaste no es válida o no tienes suficiente.")
+            label_mensaje.config(text="La cantidad que ingresaste no es válida o no tienes suficiente.", fg="red") 
             return False
 
             # Calcula cuánto vale en la moneda base
@@ -150,11 +152,11 @@ def swap_cryptos(or_sfr, crypto_origen, cantidad, crypto_destino, cryptos):
         return True  # ¡Cambio exitoso!
     else:
         # Si no se enceuntra alguna de las dos criptomonedas...
-        messagebox.showerror("Error", "Parece que una o ambas criptomonedas no existen en tu billetera.")
+        label_mensaje.config(text="Parece que una o ambas criptomonedas no existen en tu billetera.", fg="red")
         return False  # No se pudo hacer el cambio
 
 
-def realizar_swap(crypto_origen_var, cantidad_var, crypto_destino_var, nueva_ventana_swap):
+def realizar_swap(crypto_origen_var, cantidad_var, crypto_destino_var, nueva_ventana_swap, label_mensaje):
     # Obtiene los valores que el usuario ingreso
     cripto_origen = crypto_origen_var.get()  # Cripto a cambiar
     cantidad_str = cantidad_var.get()  # Cantidad a cambiar
@@ -164,19 +166,18 @@ def realizar_swap(crypto_origen_var, cantidad_var, crypto_destino_var, nueva_ven
     try:
         cantidad = float(cantidad_str)
         # Si conversión fue exitosa, llama a la función que realmente hace el cambio
-        if swap_cryptos(None, cripto_origen, cantidad, cripto_destino, cryptos):
+        if swap_cryptos(None, cripto_origen, cantidad, cripto_destino, cryptos, label_mensaje):
             # Actualiza el saldo total que se muestra
             actualizar_saldo()
 
-            messagebox.showinfo("¡Listo!", f"Se cambiaron {cantidad:.4f} {cripto_origen} por {cripto_destino}.")
-            # Cierra la ventana de swap
-            cerrar_ventana(nueva_ventana_swap, "swap")
+            label_mensaje.config(text=f"¡Listo! Se cambiaron {cantidad:.4f} {cripto_origen} por {cripto_destino}.", fg="green")
+        
             # Actualiza la vista de las criptos en la ventana principal
             actualizar_vista_criptos()
 
     except ValueError:
         # Si ingresó algo que no es un número en la cantidad, muestra un error.
-        messagebox.showerror("Error", "Por favor, ingresa una cantidad que sea un número válido.")
+        label_mensaje.config(text="Por favor, ingresa una cantidad que sea un número válido.", fg="red")
 
 
 def abrir_ventana_swap():
@@ -190,7 +191,7 @@ def abrir_ventana_swap():
     # Crea una nueva ventana encima de la principal
     nueva_ventana_swap = tk.Toplevel(root)
     nueva_ventana_swap.title("Cambiar Criptomonedas")  # Título
-    nueva_ventana_swap.geometry("300x250")  # Tamaño
+    nueva_ventana_swap.geometry("350x380")  # Tamaño
     nueva_ventana_swap.configure(bg='#121212')  # El color
 
     # Cierre de ventana
@@ -206,28 +207,31 @@ def abrir_ventana_swap():
     # Crea el menu desplegable para la cripto de origen
     # Saca los nombres de todas las criptos que hay
     nombres_criptos = [crypto[0] for crypto in cryptos]
-    combo_origen = ttk.Combobox(nueva_ventana_swap, textvariable=crypto_origen_var, values=nombres_criptos,state="readonly")
+    combo_origen = ttk.Combobox(nueva_ventana_swap, textvariable=crypto_origen_var, values=nombres_criptos)
     combo_origen.pack(pady=5)
-    
+
     # Otra etiqueta para la cantidad a cambiar
     tk.Label(nueva_ventana_swap, text="Cantidad a Cambiar:", font=("Arial", 12), bg='#121212', fg='white').pack(pady=5)
-    combo_origen.current(0)
+
     # Campo para que el usuario escriba la cantidad
     cantidad_var = tk.Entry(nueva_ventana_swap, font=("Arial", 12), justify='center')
     cantidad_var.pack(pady=5)
 
     # Etiqueta para la cripto de destino
     tk.Label(nueva_ventana_swap, text="Cripto Destino:", font=("Arial", 12), bg='#121212', fg='white').pack(pady=5)
-    
+
     # Menu desplegable para la cripto a recibir
-    combo_destino = ttk.Combobox(nueva_ventana_swap, textvariable=crypto_destino_var, values=nombres_criptos,state="readonly")
-    combo_destino.current(0)
+    combo_destino = ttk.Combobox(nueva_ventana_swap, textvariable=crypto_destino_var, values=nombres_criptos)
     combo_destino.pack(pady=5)
+
+    # Disponible para las funciones de swap
+    label_mensaje = tk.Label(nueva_ventana_swap, text="", font=("Arial", 11), bg="#121212")
+    label_mensaje.pack(pady=10)
 
     # Boton para que se realice el cambio
     btn_cambiar = tk.Button(nueva_ventana_swap, text="Cambiar",
                             command=lambda: realizar_swap(crypto_origen_var, cantidad_var, crypto_destino_var,
-                                                          nueva_ventana_swap),
+                                                          nueva_ventana_swap, label_mensaje),
                             **button_style)
     btn_cambiar.pack(pady=10)
 
@@ -301,6 +305,7 @@ def enviar_fondos():
         cripto = combo_cripto.get() #Obtiene el nombre de la cripto que el usuario selecciono en el combobox
         cantidad_str = entrada_cantidad.get().strip()#Obtiene el texto ingresado en el campo de entrada para la cantidad y quita espacios en blanco al principio o al final
         wallet_destino = entrada_wallet_destino.get().strip()#Toma texto que el usuario ingreso como numero de wallet de destino, y quita espacios al principio/final
+        print(f"Usuario eligió: {cripto}, cantidad: {cantidad_str}, wallet destino: {wallet_destino}")
 
         # Validar cantidad
         try:
@@ -309,20 +314,28 @@ def enviar_fondos():
                 raise ValueError
         except ValueError:
             label_error.config(text="❌ Cantidad inválida.", fg="red")
+            print("Cantidad inválida.")
             return
 
-        # Verificar saldo
+        # Verificar existencia y saldo
+        if cripto not in saldos:
+            label_error.config(text=f"❌ No tienes {cripto} en tu wallet.", fg="red")
+            print(f"No tienes {cripto} en tu wallet.")
+            return
         if saldos[cripto] < cantidad:
             label_error.config(text=f"❌ Saldo insuficiente de {cripto}.", fg="red")
+            print(f"Saldo insuficiente de {cripto}.")
             return
 
         # Validar wallet destino
         if not (wallet_destino.isdigit() and len(wallet_destino) == 7):
             label_error.config(text="❌ El número de wallet debe tener exactamente 7 dígitos.", fg="red")
+            print("Número de wallet inválido: debe tener 7 dígitos.")
             return
         
         if wallet_destino == wallet_number:
             label_error.config(text="❌ No podes enviarte criptomonedas a vos mismo.", fg="red")
+            print("Intento de autoenvío detectado.")
             return
 
         # Si todo esta correcto
@@ -332,11 +345,11 @@ def enviar_fondos():
         actualizar_saldo()
         actualizar_vista_criptos()
 
+        print(f"✅ Has enviado {cantidad} {cripto} a la wallet {wallet_destino}")
         label_error.config(text=f"✅ Has enviado {cantidad} {cripto} a {wallet_destino}", fg="lightgreen")
         
         entrada_cantidad.delete(0, tk.END)# Borra texto de cantidad
         entrada_wallet_destino.delete(0, tk.END)# Borra el numero de wallet
-        combo_cripto.current(0)
         combo_cripto.set('')  # Deselecciona la cripto elegida
         label_saldo_var.set('')  # Borra el saldo mostrado
 
@@ -354,8 +367,7 @@ def enviar_fondos():
     # Widgets
     tk.Label(ventana_enviar, text="Selecciona Criptomoneda", font=bold_font, bg="#121212", fg="white").pack(pady=5)
 
-    combo_cripto = ttk.Combobox(ventana_enviar, values=list(saldos.keys()),state="readonly")
-    
+    combo_cripto = ttk.Combobox(ventana_enviar, values=list(saldos.keys()))
     combo_cripto.pack(pady=5)
     combo_cripto.bind("<<ComboboxSelected>>", actualizar_saldo_disponible)
 
@@ -383,7 +395,9 @@ def enviar_fondos():
 
 ################################# FUNCION RECIBIR ################################
 def compartir_wallet():
+    # falta hacer
     print("Compartido...")
+
 
 def recibir_fondos():
     if ventanas_abiertas["recibir"] > 0:
@@ -429,8 +443,10 @@ def comprar_fondos():
 
     ventana_comprar = tk.Toplevel(root)
     ventana_comprar.title("Comprar Fondos")
-    ventana_comprar.geometry("400x250")
+    ventana_comprar.geometry("400x450")
     ventana_comprar.configure(bg='#121212')
+
+
 
     def leer_saldos():
         saldos = {}
@@ -442,12 +458,15 @@ def comprar_fondos():
         except FileNotFoundError:
             pass  # archivo vacío al principio
         return saldos
+    
+    
 
     def guardar_saldos(saldos):
-        with open("assets.txt", "w") as f:
-            for cripto, cantidad in saldos.items():
-                f.write(f"{cripto},{cantidad:.8f}\n")
-    
+        with open("assets.txt", "w") as archivo:
+            for nombre, cantidad in saldos.items():
+                archivo.write(f"{nombre},{cantidad}\n")
+                    
+
     def procesar_compra():
         cripto = combo_cripto.get()
         cantidad_str = entrada_cantidad.get().strip()
@@ -461,7 +480,7 @@ def comprar_fondos():
             return
 
         saldos = leer_saldos()
-        
+
         #Solo actualizamos la cripto seleccionada
         if cripto in saldos:
             saldos[cripto] += cantidad
@@ -475,10 +494,10 @@ def comprar_fondos():
         actualizar_saldo()        # ← idem
         actualizar_vista_criptos()# ← idem
 
-        label_error.config(text=f"✅ Has comprado {cantidad} {cripto}.", fg="lightgreen")
+        label_error.config(text=f"✅ Has comprado {cantidad} {cripto}.", fg="green")
         entrada_cantidad.delete(0, tk.END)
         combo_cripto.current(0)  # ← volver al valor inicial tras la compra
-
+    
 
     saldos = leer_saldos()
     ventana_comprar.protocol("WM_DELETE_WINDOW", lambda: (cerrar_ventana(ventana_comprar, "comprar"), ventanas_abiertas.update({"comprar": 0})))
@@ -486,7 +505,7 @@ def comprar_fondos():
     tk.Label(ventana_comprar, text="Selecciona Criptomoneda", font=bold_font, bg="#121212", fg="white").pack(pady=5)
 
     combo_cripto = ttk.Combobox(ventana_comprar, values=list(saldos.keys()), state='readonly')
-    combo_cripto.current(0)
+    combo_cripto.current(0)  # ← valor por defecto al abrir la ventana
     combo_cripto.pack(pady=5)
 
     tk.Label(ventana_comprar, text="Cantidad a comprar", font=bold_font, bg="#121212", fg="white").pack(pady=10)
@@ -498,10 +517,105 @@ def comprar_fondos():
 
     label_error = tk.Label(ventana_comprar, text="", font=("Arial", 10), bg="#121212", fg="red")
     label_error.pack(pady=5)
-    
-# FALTA HACER
+
+    # Mostramos los precios actuales por cripto (extraídos de cryptos)
+    tk.Label(ventana_comprar, text="Valores Criptos", font=bold_font, bg="#121212", fg="white").pack(pady=10)
+
+    for cripto in saldos:
+        # Buscamos el precio actual en la lista `cryptos`
+        precio_unitario = next((precio for nombre, precio, _ in cryptos if nombre == cripto), None)
+
+        if precio_unitario is not None:
+            valor_unitario_str = f"${precio_unitario:,.2f}"
+        else:
+            valor_unitario_str = "N/A"
+
+        texto = f"{cripto}: {valor_unitario_str}"
+        tk.Label(ventana_comprar, text=texto, font=("Arial", 10), bg="#121212", fg="lightgray").pack()
+
+
+# falta hacer
 def vender_fondos():
-    print("Vendiendo fondos...")
+    if ventanas_abiertas.get("vender",0) > 0:
+        return
+    ventanas_abiertas["vender"] = 1
+    # Crear nueva ventana
+    ventana_vender = tk.Toplevel(root)
+    ventana_vender.title("Vender Criptomonedas")
+    ventana_vender.geometry("400x500")
+    ventana_vender.configure(bg="#121212")
+
+    ventana_vender.protocol("WM_DELETE_WINDOW", lambda: cerrar_ventana(ventana_vender, "vender"))
+
+    tk.Label(ventana_vender, text="Seleccioná la criptomoneda a vender:",
+             font=("Arial", 12), bg="#121212", fg="white").pack(pady=10)
+
+    # Combobox para elegir la cripto
+    cripto_nombres = [nombre for nombre, _, _ in cryptos if nombre != "USD"]
+    combo = ttk.Combobox(ventana_vender, values=cripto_nombres, state="readonly", font=("Arial", 12))
+    combo.pack(pady=5)
+    combo.set(cripto_nombres[0])
+
+    tk.Label(ventana_vender, text="Cantidad a vender:",
+             font=("Arial", 12), bg="#121212", fg="white").pack(pady=10)
+
+    entry_cantidad = tk.Entry(ventana_vender, font=("Arial", 12), justify="center")
+    entry_cantidad.pack(pady=5)
+
+    label_mensaje = tk.Label(ventana_vender, text="", font=("Arial", 11), bg="#121212")
+    label_mensaje.pack(pady=10)
+
+    def realizar_venta():
+        nombre_cripto = combo.get()
+        try:
+            cantidad = float(entry_cantidad.get())
+        except ValueError:
+            label_mensaje.config(text="Cantidad inválida.", fg="red")
+            return
+
+        if cantidad <= 0:
+            label_mensaje.config(text="La cantidad debe ser mayor a 0.", fg="red")
+            return
+
+        # Buscar y procesar la cripto
+        for i, (nombre, precio, cantidad_disponible) in enumerate(cryptos):
+            if nombre == nombre_cripto:
+                if cantidad > cantidad_disponible:
+                    label_mensaje.config(text="No tenés suficiente saldo.", fg="red")
+                    return
+                else:
+                    precio_usd = obtener_precio_cripto(nombre_cripto)
+                    valor_total = cantidad * precio_usd
+
+                    # Actualizar la cripto vendida
+                    cryptos[i] = (nombre, precio, cantidad_disponible - cantidad)
+
+                    # Sumar USD al balance
+                    for j, (n, p, a) in enumerate(cryptos):
+                        if n == "USD":
+                            cryptos[j] = (n, p, a + valor_total)
+                            break
+
+                    actualizar_vista_criptos()
+                    label_mensaje.config(
+                        text=f"Vendiste {cantidad:.4f} {nombre_cripto} por ${valor_total:.2f} USD",
+                        fg="green"
+                    )
+                    return
+
+        label_mensaje.config(text="Criptomoneda no encontrada.", fg="red")
+        
+
+    # Botón para vender
+    tk.Button(ventana_vender, text="Vender", command=realizar_venta, **button_style).pack(pady=15)
+    # Mostrar valores actuales en USD
+    tk.Label(ventana_vender, text="Valores Criptos (USD)", font=bold_font, bg="#121212", fg="white").pack(pady=10)
+
+    for cripto in cripto_nombres:  # No mostramos USD, solo criptos
+        precio_usd = obtener_precio_cripto(cripto)
+        texto = f"{cripto}: ${precio_usd:,.2f}"
+        tk.Label(ventana_vender, text=texto, font=("Arial", 10), bg="#121212", fg="lightgray").pack()
+
 
 
 # ----------- INICIO DEL PROGRAMA -----------
