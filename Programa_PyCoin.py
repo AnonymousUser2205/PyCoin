@@ -5,8 +5,6 @@ from tkinter import messagebox
 from tkinter import ttk
 import os
 
-#19 de junio
-
 ##### VARIABLES #######
 ventanas_abiertas = {"recibir": 0, "swap": 0,"enviar": 0, "comprar": 0, "vender": 0}
 wallet_number = "6942969"
@@ -59,15 +57,16 @@ def generar_datos_por_defecto():
     cryptos = generar_cripto_data()
     guardar_datos()
 
+precios_fijos = {
+    "Ethereum": random.randint(400000, 600000) / 100,
+    "Solana": random.randint(150000, 300000) / 100,
+    "Avalanche": random.randint(80000, 150000) / 100,
+    "Matic": random.randint(6000, 10000) / 100,
+    "USD": 1.0
+}
+
 def obtener_precio_cripto(nombre):
-    precios = {
-        "Ethereum": random.randint(400000, 600000) / 100,
-        "Solana": random.randint(150000, 300000) / 100,
-        "Avalanche": random.randint(80000, 150000) / 100,
-        "Matic": random.randint(6000, 10000) / 100,
-        "USD": 1.0
-    }
-    return precios.get(nombre, 0.0)
+    return precios_fijos.get(nombre, 0.0)
 
 
 ##### FUNCIONES #########
@@ -538,13 +537,13 @@ def comprar_fondos():
 
 # falta hacer
 def vender_fondos():
-    if ventanas_abiertas.get("vender",0) > 0:
+    if ventanas_abiertas.get("vender", 0) > 0:
         return
     ventanas_abiertas["vender"] = 1
-    # Crear nueva ventana
+
     ventana_vender = tk.Toplevel(root)
     ventana_vender.title("Vender Criptomonedas")
-    ventana_vender.geometry("400x500")
+    ventana_vender.geometry("400x550")
     ventana_vender.configure(bg="#121212")
 
     ventana_vender.protocol("WM_DELETE_WINDOW", lambda: cerrar_ventana(ventana_vender, "vender"))
@@ -552,44 +551,52 @@ def vender_fondos():
     tk.Label(ventana_vender, text="Seleccioná la criptomoneda a vender:",
              font=("Arial", 12), bg="#121212", fg="white").pack(pady=10)
 
-    # Combobox para elegir la cripto
     cripto_nombres = [nombre for nombre, _, _ in cryptos if nombre != "USD"]
     combo = ttk.Combobox(ventana_vender, values=cripto_nombres, state="readonly", font=("Arial", 12))
     combo.pack(pady=5)
     combo.set(cripto_nombres[0])
 
-    tk.Label(ventana_vender, text="Cantidad a vender:",
-             font=("Arial", 12), bg="#121212", fg="white").pack(pady=10)
-
+    tk.Label(ventana_vender, text="Cantidad a vender:", font=("Arial", 12), bg="#121212", fg="white").pack(pady=10)
     entry_cantidad = tk.Entry(ventana_vender, font=("Arial", 12), justify="center")
     entry_cantidad.pack(pady=5)
+
+    # Entrada de CVU
+    tk.Label(ventana_vender, text="CVU destino (10 dígitos)", font=("Arial", 12), bg="#121212", fg="white").pack(pady=10)
+    entrada_cvu = tk.Entry(ventana_vender, font=("Arial", 12), justify="center")
+    entrada_cvu.pack(pady=5)
 
     label_mensaje = tk.Label(ventana_vender, text="", font=("Arial", 11), bg="#121212")
     label_mensaje.pack(pady=10)
 
     def realizar_venta():
         nombre_cripto = combo.get()
+        cantidad_str = entry_cantidad.get().strip()
+        cvu = entrada_cvu.get().strip()
+
+        # Validación de cantidad
         try:
-            cantidad = float(entry_cantidad.get())
+            cantidad = float(cantidad_str)
+            if cantidad <= 0:
+                raise ValueError
         except ValueError:
-            label_mensaje.config(text="Cantidad inválida.", fg="red")
+            label_mensaje.config(text="❌ Cantidad inválida.", fg="red")
             return
 
-        if cantidad <= 0:
-            label_mensaje.config(text="La cantidad debe ser mayor a 0.", fg="red")
+        # Validación de CVU
+        if not (cvu.isdigit() and len(cvu) == 10):
+            label_mensaje.config(text="❌ El CVU debe tener exactamente 10 dígitos numéricos.", fg="red")
             return
 
-        # Buscar y procesar la cripto
         for i, (nombre, precio, cantidad_disponible) in enumerate(cryptos):
             if nombre == nombre_cripto:
                 if cantidad > cantidad_disponible:
-                    label_mensaje.config(text="No tenés suficiente saldo.", fg="red")
+                    label_mensaje.config(text="❌ No tenés suficiente saldo.", fg="red")
                     return
                 else:
                     precio_usd = obtener_precio_cripto(nombre_cripto)
                     valor_total = cantidad * precio_usd
 
-                    # Actualizar la cripto vendida
+                    # Descontar de la cripto vendida
                     cryptos[i] = (nombre, precio, cantidad_disponible - cantidad)
 
                     # Sumar USD al balance
@@ -599,21 +606,23 @@ def vender_fondos():
                             break
 
                     actualizar_vista_criptos()
+                    entry_cantidad.delete(0, tk.END)
+                    entrada_cvu.delete(0, tk.END)
+                    combo.current(0)
+
                     label_mensaje.config(
-                        text=f"Vendiste {cantidad:.4f} {nombre_cripto} por ${valor_total:.2f} USD",
-                        fg="green"
+                        text=f"✅ Vendiste {cantidad:.4f} {nombre_cripto} por ${valor_total:,.2f} USD\nEnviado a CVU {cvu}",
+                        fg="lightgreen"
                     )
                     return
 
-        label_mensaje.config(text="Criptomoneda no encontrada.", fg="red")
-        
+        label_mensaje.config(text="❌ Criptomoneda no encontrada.", fg="red")
 
-    # Botón para vender
     tk.Button(ventana_vender, text="Vender", command=realizar_venta, **button_style).pack(pady=15)
+
     # Mostrar valores actuales en USD
     tk.Label(ventana_vender, text="Valores Criptos (USD)", font=bold_font, bg="#121212", fg="white").pack(pady=10)
-
-    for cripto in cripto_nombres:  # No mostramos USD, solo criptos
+    for cripto in cripto_nombres:
         precio_usd = obtener_precio_cripto(cripto)
         texto = f"{cripto}: ${precio_usd:,.2f}"
         tk.Label(ventana_vender, text=texto, font=("Arial", 10), bg="#121212", fg="lightgray").pack()
