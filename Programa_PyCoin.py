@@ -9,7 +9,7 @@ import os
 # 30/6/2025
 ##### VARIABLES #######
 ventanas_abiertas = {"recibir": 0, "swap": 0,"enviar": 0, "comprar": 0, "vender": 0}
-wallet_number = "6942969"
+wallet_number = "0701025"
 cryptos = []
 
 # Estilo de los botones
