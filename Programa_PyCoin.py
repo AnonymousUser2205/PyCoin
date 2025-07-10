@@ -4,8 +4,8 @@ from tkinter import font
 from tkinter import messagebox
 from tkinter import ttk
 import os
-
-#19 de junio
+from datetime import datetime #Obtener la fecha y hora actual (factura)
+from tkinter import filedialog #Guardar el archivo de la factura
 
 ##### VARIABLES #######
 ventanas_abiertas = {"recibir": 0, "swap": 0,"enviar": 0, "comprar": 0, "vender": 0}
@@ -59,15 +59,16 @@ def generar_datos_por_defecto():
     cryptos = generar_cripto_data()
     guardar_datos()
 
+precios_fijos = {
+    "Ethereum": random.randint(400000, 600000) / 100,
+    "Solana": random.randint(150000, 300000) / 100,
+    "Avalanche": random.randint(80000, 150000) / 100,
+    "Matic": random.randint(6000, 10000) / 100,
+    "USD": 1.0
+}
+
 def obtener_precio_cripto(nombre):
-    precios = {
-        "Ethereum": random.randint(400000, 600000) / 100,
-        "Solana": random.randint(150000, 300000) / 100,
-        "Avalanche": random.randint(80000, 150000) / 100,
-        "Matic": random.randint(6000, 10000) / 100,
-        "USD": 1.0
-    }
-    return precios.get(nombre, 0.0)
+    return precios_fijos.get(nombre, 0.0)
 
 
 ##### FUNCIONES #########
@@ -308,7 +309,7 @@ def enviar_fondos():
         cantidad_str = entrada_cantidad.get().strip()#Obtiene el texto ingresado en el campo de entrada para la cantidad y quita espacios en blanco al principio o al final
         wallet_destino = entrada_wallet_destino.get().strip()#Toma texto que el usuario ingreso como numero de wallet de destino, y quita espacios al principio/final
         print(f"Usuario eligió: {cripto}, cantidad: {cantidad_str}, wallet destino: {wallet_destino}")
-
+        
         # Validar cantidad
         try:
             cantidad = float(cantidad_str)
@@ -349,6 +350,29 @@ def enviar_fondos():
 
         print(f"✅ Has enviado {cantidad} {cripto} a la wallet {wallet_destino}")
         label_error.config(text=f"✅ Has enviado {cantidad} {cripto} a {wallet_destino}", fg="lightgreen")
+
+        #Generar comprobante
+        fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        nombre_archivo = f"comprobante_envio_{cripto}_{fecha_hora.replace(' ', '_').replace(':', '-')}.txt"
+        contenido_comprobante = f"""
+        --- COMPROBANTE DE ENVÍO DE CRIPTOMONEDA --- Fecha y Hora: {fecha_hora}
+        Criptomoneda Enviada: {cripto}
+        Cantidad Enviada: {cantidad:.4f}
+        Wallet Origen : {wallet_number}
+        Wallet Destino: {wallet_destino}
+        ¡Envío realizado con éxito!"""
+
+        # Guardar el archivo
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            initialfile=nombre_archivo,
+            title="Guardar Comprobante de Envío",
+            filetypes=[("Archivos de Texto", "*.txt"), ("Todos los Archivos", "*.*")]
+        )
+        if filepath:
+            with open(filepath, "w") as file:
+                file.write(contenido_comprobante)
+            messagebox.showinfo("Comprobante Generado", f"Comprobante guardado en:\n{filepath}")
         
         entrada_cantidad.delete(0, tk.END)# Borra texto de cantidad
         entrada_wallet_destino.delete(0, tk.END)# Borra el numero de wallet
@@ -397,7 +421,6 @@ def enviar_fondos():
 
 ################################# FUNCION RECIBIR ################################
 def compartir_wallet():
-    # falta hacer
     print("Compartido...")
 
 
@@ -407,37 +430,37 @@ def recibir_fondos():
     ventanas_abiertas["recibir"] += 1
     wallet_number = 6942969
 
-    # Crear una nueva ventana
+    #Crear una nueva ventana
     nueva_ventana = tk.Toplevel(root)
     nueva_ventana.title("Recibir Fondos")
     nueva_ventana.geometry("400x300")  # Tamaño de la ventana
     nueva_ventana.configure(bg='#121212')
 
-    # al cerrar la ventana, restamos el contador
+    #Al cerrar la ventana, restamos el contador
     nueva_ventana.protocol("WM_DELETE_WINDOW", lambda: cerrar_ventana(nueva_ventana, "recibir"))
 
-    # etiqueta para mostrar el numero de wallet
+    #Etiqueta para mostrar el numero de wallet
     label_wallet = tk.Label(nueva_ventana, text="Tu número de wallet es:", font=("Arial", 12), bg='#121212', fg='white')
     label_wallet.pack(pady=10)
 
-    # campo de texto para mostrar el numero de wallet
+    #Campo de texto para mostrar el numero de wallet
     entry_wallet = tk.Entry(nueva_ventana, font=("Arial", 12), justify='center')
     entry_wallet.insert(0, wallet_number)  # Insertar el número de wallet
     entry_wallet.pack(pady=10)
     entry_wallet.config(state='readonly')  # Hacer el campo de texto solo lectura
 
-    # Boton para copiar el numero de wallet
+    #Boton para copiar el numero de wallet
     btn_copiar = tk.Button(nueva_ventana, text="Copiar",
                            command=lambda: root.clipboard_clear() or root.clipboard_append(entry_wallet.get()),
                            **button_style)
     btn_copiar.pack(pady=5)
 
-    # Boton para compartir el numero de wallet
+    #Boton para compartir el numero de wallet
     btn_compartir = tk.Button(nueva_ventana, text="Compartir", command=compartir_wallet, **button_style)
     btn_compartir.pack(pady=5)
 
 
-# Funciones adicionales
+#Funciones adicionales
 def comprar_fondos():
     if ventanas_abiertas.get("comprar", 0) > 0:
         return
@@ -458,7 +481,7 @@ def comprar_fondos():
                     nombre, cantidad = linea.strip().split(',')
                     saldos[nombre] = float(cantidad)
         except FileNotFoundError:
-            pass  # archivo vacío al principio
+            pass  #Archivo vacío al principio
         return saldos
     
     
@@ -491,14 +514,14 @@ def comprar_fondos():
 
         guardar_saldos(saldos)
 
-        #Estas funciones NO deben tocar precios
-        cargar_datos()            # ← debe solo actualizar cantidades
-        actualizar_saldo()        # ← idem
-        actualizar_vista_criptos()# ← idem
+        #Estas funciones NO tocar precios
+        cargar_datos()            # Debe solo actualizar cantidades
+        actualizar_saldo()        # Idem
+        actualizar_vista_criptos()# Idem
 
         label_error.config(text=f"✅ Has comprado {cantidad} {cripto}.", fg="green")
         entrada_cantidad.delete(0, tk.END)
-        combo_cripto.current(0)  # ← volver al valor inicial tras la compra
+        combo_cripto.current(0)  #Volver al valor inicial tras la compra
     
 
     saldos = leer_saldos()
@@ -507,7 +530,7 @@ def comprar_fondos():
     tk.Label(ventana_comprar, text="Selecciona Criptomoneda", font=bold_font, bg="#121212", fg="white").pack(pady=5)
 
     combo_cripto = ttk.Combobox(ventana_comprar, values=list(saldos.keys()), state='readonly')
-    combo_cripto.current(0)  # ← valor por defecto al abrir la ventana
+    combo_cripto.current(0)  #Valor por defecto al abrir la ventana
     combo_cripto.pack(pady=5)
 
     tk.Label(ventana_comprar, text="Cantidad a comprar", font=bold_font, bg="#121212", fg="white").pack(pady=10)
@@ -536,15 +559,15 @@ def comprar_fondos():
         tk.Label(ventana_comprar, text=texto, font=("Arial", 10), bg="#121212", fg="lightgray").pack()
 
 
-# falta hacer
+
 def vender_fondos():
-    if ventanas_abiertas.get("vender",0) > 0:
+    if ventanas_abiertas.get("vender", 0) > 0:
         return
     ventanas_abiertas["vender"] = 1
-    # Crear nueva ventana
+
     ventana_vender = tk.Toplevel(root)
     ventana_vender.title("Vender Criptomonedas")
-    ventana_vender.geometry("400x500")
+    ventana_vender.geometry("400x550")
     ventana_vender.configure(bg="#121212")
 
     ventana_vender.protocol("WM_DELETE_WINDOW", lambda: cerrar_ventana(ventana_vender, "vender"))
@@ -552,44 +575,53 @@ def vender_fondos():
     tk.Label(ventana_vender, text="Seleccioná la criptomoneda a vender:",
              font=("Arial", 12), bg="#121212", fg="white").pack(pady=10)
 
-    # Combobox para elegir la cripto
     cripto_nombres = [nombre for nombre, _, _ in cryptos if nombre != "USD"]
     combo = ttk.Combobox(ventana_vender, values=cripto_nombres, state="readonly", font=("Arial", 12))
     combo.pack(pady=5)
     combo.set(cripto_nombres[0])
+    
 
-    tk.Label(ventana_vender, text="Cantidad a vender:",
-             font=("Arial", 12), bg="#121212", fg="white").pack(pady=10)
-
+    tk.Label(ventana_vender, text="Cantidad a vender:", font=("Arial", 12), bg="#121212", fg="white").pack(pady=10)
     entry_cantidad = tk.Entry(ventana_vender, font=("Arial", 12), justify="center")
     entry_cantidad.pack(pady=5)
+
+    # Entrada de CVU
+    tk.Label(ventana_vender, text="CVU destino (10 dígitos)", font=("Arial", 12), bg="#121212", fg="white").pack(pady=10)
+    entrada_cvu = tk.Entry(ventana_vender, font=("Arial", 12), justify="center")
+    entrada_cvu.pack(pady=5)
 
     label_mensaje = tk.Label(ventana_vender, text="", font=("Arial", 11), bg="#121212")
     label_mensaje.pack(pady=10)
 
     def realizar_venta():
         nombre_cripto = combo.get()
+        cantidad_str = entry_cantidad.get().strip()
+        cvu = entrada_cvu.get().strip()
+
+        # Validación de cantidad
         try:
-            cantidad = float(entry_cantidad.get())
+            cantidad = float(cantidad_str)
+            if cantidad <= 0:
+                raise ValueError
         except ValueError:
-            label_mensaje.config(text="Cantidad inválida.", fg="red")
+            label_mensaje.config(text="❌ Cantidad inválida.", fg="red")
             return
 
-        if cantidad <= 0:
-            label_mensaje.config(text="La cantidad debe ser mayor a 0.", fg="red")
+        # Validación de CVU
+        if not (cvu.isdigit() and len(cvu) == 10):
+            label_mensaje.config(text="❌ El CVU debe tener exactamente 10 dígitos numéricos.", fg="red")
             return
 
-        # Buscar y procesar la cripto
         for i, (nombre, precio, cantidad_disponible) in enumerate(cryptos):
             if nombre == nombre_cripto:
                 if cantidad > cantidad_disponible:
-                    label_mensaje.config(text="No tenés suficiente saldo.", fg="red")
+                    label_mensaje.config(text="❌ No tenés suficiente saldo.", fg="red")
                     return
                 else:
                     precio_usd = obtener_precio_cripto(nombre_cripto)
                     valor_total = cantidad * precio_usd
 
-                    # Actualizar la cripto vendida
+                    # Descontar de la cripto vendida
                     cryptos[i] = (nombre, precio, cantidad_disponible - cantidad)
 
                     # Sumar USD al balance
@@ -597,23 +629,62 @@ def vender_fondos():
                         if n == "USD":
                             cryptos[j] = (n, p, a + valor_total)
                             break
+                    # Generar y descargar factura
+                    fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    nombre_archivo = f"factura_venta_{nombre_cripto}_{fecha_hora.replace(' ', '_').replace(':', '-')}.txt"
+                    contenido_factura = f"""
+--- FACTURA DE VENTA DE CRIPTOMONEDA ---
+Fecha y Hora: {fecha_hora}
+----------------------------------------
+Criptomoneda Vendida: {nombre_cripto}
+Cantidad Vendida: {cantidad:.4f} 
+Valor Unitario (USD): ${precio_usd:,.2f}
+Valor Total Recibido (USD): ${valor_total:,.2f}
+----------------------------------------
+CVU Origen (Tu Wallet): {wallet_number}
+CVU Destino: {cvu}
+----------------------------------------
+¡Gracias por tu operación!"""
+
+                    #Guardar el archivo
+                    filepath = filedialog.asksaveasfilename(
+                        defaultextension=".txt",
+                        initialfile=nombre_archivo,
+                        title="Guardar Factura de Venta",
+                        filetypes=[("Archivos de Texto", "*.txt"), ("Todos los Archivos", "*.*")]
+                    )
+                    if filepath:
+                        with open(filepath, "w") as file:
+                            file.write(contenido_factura)
+                        messagebox.showinfo("Factura Generada", f"Factura guardada en:\n{filepath}")
+                    
 
                     actualizar_vista_criptos()
+                    entry_cantidad.delete(0, tk.END)
+                    entrada_cvu.delete(0, tk.END)
+                    if cripto_nombres: #Hay elementos antes de intentar establecer el valor?
+                        combo.current(0)
+
                     label_mensaje.config(
-                        text=f"Vendiste {cantidad:.4f} {nombre_cripto} por ${valor_total:.2f} USD",
+                        text=f"✅ Vendiste {cantidad:.4f} {nombre_cripto} por ${valor_total:,.2f} USD\nEnviado a CVU {cvu}",
                         fg="green"
                     )
                     return
 
-        label_mensaje.config(text="Criptomoneda no encontrada.", fg="red")
-        
 
-    # Botón para vender
+                    label_mensaje.config(
+                        text=f"✅ Vendiste {cantidad:.4f} {nombre_cripto} por ${valor_total:,.2f} USD\nEnviado a CVU {cvu}",
+                        fg="green"
+                    )
+                    return
+
+        label_mensaje.config(text="❌ Criptomoneda no encontrada.", fg="red")
+
     tk.Button(ventana_vender, text="Vender", command=realizar_venta, **button_style).pack(pady=15)
+
     # Mostrar valores actuales en USD
     tk.Label(ventana_vender, text="Valores Criptos (USD)", font=bold_font, bg="#121212", fg="white").pack(pady=10)
-
-    for cripto in cripto_nombres:  # No mostramos USD, solo criptos
+    for cripto in cripto_nombres:
         precio_usd = obtener_precio_cripto(cripto)
         texto = f"{cripto}: ${precio_usd:,.2f}"
         tk.Label(ventana_vender, text=texto, font=("Arial", 10), bg="#121212", fg="lightgray").pack()
@@ -662,3 +733,5 @@ frame_cryptos.pack(fill='x', padx=10)
 
 actualizar_vista_criptos()
 root.mainloop()
+
+
